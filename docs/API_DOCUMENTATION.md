@@ -192,6 +192,219 @@ Response 200:
 
 ---
 
+## Orders & Checkout
+
+### Create Order
+```
+POST /orders
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "items": [...],
+  "shippingAddressId": "uuid",
+  "billingAddressId": "uuid",
+  "shippingMethod": "standard",
+  "paymentMethod": "card",
+  "promoCode": "KINBEN10",
+  "customerNotes": "Please deliver in the morning"
+}
+
+Response 201:
+{
+  "success": true,
+  "data": {
+    "order": {
+      "id": "uuid",
+      "orderNumber": "ORD-XXXXX-XXXXX",
+      "status": "pending",
+      "total": 3897.50,
+      "items": [...],
+      "shipping": 100
+    },
+    "clientSecret": "mock_uuid"
+  },
+  "message": "Order created successfully"
+}
+```
+
+### Get User Orders
+```
+GET /orders?page=1&limit=20&status=pending
+Authorization: Bearer <accessToken>
+
+Response 200:
+{
+  "success": true,
+  "data": [ { order objects } ],
+  "pagination": { ... }
+}
+```
+
+### Get Order Details
+```
+GET /orders/:orderId
+Authorization: Bearer <accessToken>
+
+Response 200:
+{
+  "success": true,
+  "data": { order object with items and addresses }
+}
+```
+
+### Cancel Order
+```
+POST /orders/:orderId/cancel
+Authorization: Bearer <accessToken>
+
+Response 200:
+{
+  "success": true,
+  "data": { updated order },
+  "message": "Order cancelled successfully"
+}
+```
+
+### Update Order Status (Admin)
+```
+PATCH /orders/:orderId
+Authorization: Bearer <adminToken>
+Content-Type: application/json
+
+{
+  "status": "shipped",
+  "trackingNumber": "TRACK123456"
+}
+
+Response 200:
+{
+  "success": true,
+  "data": { updated order },
+  "message": "Order status updated"
+}
+```
+
+---
+
+## User Profile & Addresses
+
+### Get User Profile
+```
+GET /users/profile
+Authorization: Bearer <accessToken>
+
+Response 200:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "phone_number": "01700000000",
+    "date_of_birth": "1990-01-01",
+    "gender": "Male"
+  }
+}
+```
+
+### Update User Profile
+```
+PATCH /users/profile
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "01700000000",
+  "dateOfBirth": "1990-01-01",
+  "gender": "Male"
+}
+
+Response 200:
+{
+  "success": true,
+  "data": { updated user },
+  "message": "Profile updated successfully"
+}
+```
+
+### Create Address
+```
+POST /users/addresses
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "label": "Home",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "01700000000",
+  "streetAddress": "House 16, Street 10",
+  "apartmentSuite": "Apt 5",
+  "city": "Dhaka",
+  "stateProvince": "Dhaka",
+  "postalCode": "1207",
+  "country": "Bangladesh",
+  "isDefaultShipping": true,
+  "isDefaultBilling": true
+}
+
+Response 201:
+{
+  "success": true,
+  "data": { address object },
+  "message": "Address created successfully"
+}
+```
+
+### Get Addresses
+```
+GET /users/addresses
+Authorization: Bearer <accessToken>
+
+Response 200:
+{
+  "success": true,
+  "data": [ { address objects } ]
+}
+```
+
+### Update Address
+```
+PATCH /users/addresses/:addressId
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "city": "Chittagong",
+  "isDefaultShipping": false
+}
+
+Response 200:
+{
+  "success": true,
+  "data": { updated address },
+  "message": "Address updated successfully"
+}
+```
+
+### Delete Address
+```
+DELETE /users/addresses/:addressId
+Authorization: Bearer <accessToken>
+
+Response 200:
+{
+  "success": true,
+  "message": "Address deleted successfully"
+}
+```
+
+---
+
 ## Shopping Cart
 
 ### Get Cart
