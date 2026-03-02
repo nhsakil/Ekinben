@@ -405,6 +405,98 @@ Response 200:
 
 ---
 
+## Reviews & Ratings
+
+### Get Reviews for Product
+```
+GET /reviews/product/:productId?page=1&limit=10&sort=newest&rating=0
+
+Response 200:
+{
+  "success": true,
+  "data": [ { review objects } ],
+  "pagination": { ... }
+}
+```
+
+### Submit a Review
+```
+POST /reviews
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "productId": "uuid",
+  "rating": 5,
+  "title": "Great shirt!",
+  "comment": "Loved the fabric and fit."
+}
+
+Response 201:
+{
+  "success": true,
+  "data": { review object },
+  "message": "Review submitted successfully. Awaiting approval."
+}
+```
+
+### Update Review
+```
+PATCH /reviews/:reviewId
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Updated comment text"
+}
+
+Response 200: { success, data, message }
+```
+
+### Delete Review
+```
+DELETE /reviews/:reviewId
+Authorization: Bearer <accessToken>
+
+Response 200: { success, message }
+```
+
+### Mark Review Helpful/Unhelpful
+```
+POST /reviews/:reviewId/helpful
+Content-Type: application/json
+
+{
+  "helpful": true
+}
+
+Response 200: { success, data: { helpful_count, unhelpful_count }, message }
+```
+
+### Admin: View Pending Reviews
+```
+GET /reviews/admin/pending?page=1&limit=20
+Authorization: Bearer <adminToken>
+
+Response 200: { success, data: [ review objects ], pagination }
+```
+
+### Admin: Approve or Reject Review
+```
+PATCH /reviews/:reviewId/approve
+Authorization: Bearer <adminToken>
+
+PATCH /reviews/:reviewId/reject
+Authorization: Bearer <adminToken>
+Content-Type: application/json
+{
+  "reason": "Inappropriate language"
+}
+
+Response 200 with success message.
+```
+
 ## Shopping Cart
 
 ### Get Cart
