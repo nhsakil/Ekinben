@@ -29,7 +29,9 @@ import SignupPage from './pages/auth/signup';
 
 // Pages - Account
 import ProfilePage from './pages/account/profile';
+import AddressBookPage from './pages/account/addresses';
 import OrdersPage from './pages/account/orders';
+import SettingsPage from './pages/account/settings';
 import WishlistPage from './pages/account/wishlist';
 
 // Pages - Blog (placeholders)
@@ -101,10 +103,26 @@ function App() {
                     }
                   />
                   <Route
+                    path="/account/addresses"
+                    element={
+                      <ProtectedRoute>
+                        <AddressBookPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/account/orders"
                     element={
                       <ProtectedRoute>
                         <OrdersPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account/settings"
+                    element={
+                      <ProtectedRoute>
+                        <SettingsPage />
                       </ProtectedRoute>
                     }
                   />
