@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { validatePhone, validatePostalCode } from '../utils/validators.js';
+import { validatePhone, validatePostalCode, validatePassword } from '../utils/validators.js';
+import bcrypt from 'bcryptjs';
 
 export const getUserProfile = async (req, res, next) => {
   try {
@@ -284,11 +285,112 @@ export const deleteAddress = async (req, res, next) => {
   }
 };
 
+export const changePassword = async (req, res, next) => {
+  try {
+    const { userId } = req.user;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      throw new AppError('Missing required fields', 400, 'VALIDATION_ERROR');
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new AppError('New password and confirm password do not match', 400, 'PASSWORD_MISMATCH');
+    }
+
+    if (!validatePassword(newPassword)) {
+      throw new AppError(
+        'Password must be at least 8 characters with uppercase, number, and special character',
+        400,
+        'WEAK_PASSWORD'
+      );
+    }
+
+    // Fetch user with password hash
+    const { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('password_hash')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !user) {
+      throw new AppError('User not found', 404, 'NOT_FOUND');
+    }
+
+    // Verify current password
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!passwordMatch) {
+      throw new AppError('Current password is incorrect', 400, 'INVALID_CURRENT_PASSWORD');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        password_hash: hashedPassword,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw new AppError('Failed to update password', 500, 'UPDATE_ERROR');
+    }
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleNewsletter = async (req, res, next) => {
+  try {
+    const { userId } = req.user;
+    const { subscribed } = req.body;
+
+    if (subscribed === undefined) {
+      throw new AppError('Missing subscribed field', 400, 'VALIDATION_ERROR');
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({
+        newsletter_subscribed: subscribed,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new AppError('Failed to update newsletter subscription', 500, 'UPDATE_ERROR');
+    }
+
+    res.json({
+      success: true,
+      data: {
+        subscribed: user.newsletter_subscribed
+      },
+      message: subscribed ? 'Successfully subscribed to newsletter' : 'Successfully unsubscribed from newsletter'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   getUserProfile,
   updateUserProfile,
   createAddress,
   getAddresses,
   updateAddress,
-  deleteAddress
+  deleteAddress,
+  changePassword,
+  toggleNewsletter
 };

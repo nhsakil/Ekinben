@@ -5,7 +5,9 @@ import {
   createAddress,
   getAddresses,
   updateAddress,
-  deleteAddress
+  deleteAddress,
+  changePassword,
+  toggleNewsletter
 } from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -17,6 +19,8 @@ router.use(authMiddleware);
 // Profile routes
 router.get('/profile', getUserProfile);
 router.patch('/profile', updateUserProfile);
+router.post('/change-password', changePassword);
+router.patch('/newsletter', toggleNewsletter);
 
 // Address routes
 router.post('/addresses', createAddress);
