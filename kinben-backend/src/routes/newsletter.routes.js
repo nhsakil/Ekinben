@@ -1,15 +1,26 @@
-// Newsletter routes scaffold
 import express from 'express';
+import {
+  subscribeNewsletter,
+  getSubscribers,
+  unsubscribeNewsletter,
+  removeSubscriber,
+  getNewsletterStats,
+  batchUnsubscribe
+} from '../controllers/newsletterController.js';
+import { authMiddleware, adminMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
+
 const router = express.Router();
 
-// Sample controller imports (to be implemented)
-// import { subscribeNewsletter, getSubscribers, removeSubscriber } from '../controllers/newsletterController.js';
+// Public route - Subscribe to newsletter
+router.post('/subscribe', optionalAuthMiddleware, subscribeNewsletter);
 
-// POST /api/newsletter/subscribe
-router.post('/subscribe', (req, res) => res.json({ success: true, message: 'Subscribed to newsletter' }));
-// GET /api/newsletter/subscribers
-router.get('/subscribers', (req, res) => res.json({ success: true, data: [] }));
-// DELETE /api/newsletter/subscribers/:id
-router.delete('/subscribers/:id', (req, res) => res.json({ success: true, message: 'Subscriber removed' }));
+// Unsubscribe route (public, uses token in email)
+router.post('/unsubscribe/:id', unsubscribeNewsletter);
+
+// Admin routes
+router.get('/subscribers', authMiddleware, adminMiddleware, getSubscribers);
+router.delete('/subscribers/:id', authMiddleware, adminMiddleware, removeSubscriber);
+router.post('/subscribers/batch-unsubscribe', authMiddleware, adminMiddleware, batchUnsubscribe);
+router.get('/stats', authMiddleware, adminMiddleware, getNewsletterStats);
 
 export default router;

@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
-import { supabase } from '../config/supabase.js';
+import { pool } from '../config/database.js';
 import { generateTokens } from '../utils/tokenManager.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { validateEmail, validatePassword } from '../utils/validators.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const signup = async (req, res, next) => {
   try {
@@ -22,13 +23,12 @@ export const signup = async (req, res, next) => {
     }
 
     // Check if user exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
+    const [existingUsers] = await pool.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email.toLowerCase()]
+    );
 
-    if (existingUser) {
+    if (existingUsers.length > 0) {
       throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
     }
 
@@ -37,34 +37,27 @@ export const signup = async (req, res, next) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Create user
-    const { data: newUser, error: createError } = await supabase
-      .from('users')
-      .insert([{
-        email: email.toLowerCase(),
-        password_hash: passwordHash,
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phone
-      }])
-      .select()
-      .single();
+    const userId = uuidv4();
+    const now = new Date();
 
-    if (createError) {
-      console.error('Supabase createError:', createError);
-      throw new AppError('Failed to create user', 500, 'USER_CREATE_ERROR');
-    }
+    await pool.query(
+      `INSERT INTO users
+       (id, email, password_hash, first_name, last_name, phone_number, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, email.toLowerCase(), passwordHash, firstName, lastName, phone, now, now]
+    );
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(newUser.id, newUser.email);
+    const { accessToken, refreshToken } = generateTokens(userId, email.toLowerCase());
 
     res.status(201).json({
       success: true,
       data: {
         user: {
-          id: newUser.id,
-          email: newUser.email,
-          firstName: newUser.first_name,
-          lastName: newUser.last_name
+          id: userId,
+          email: email.toLowerCase(),
+          firstName,
+          lastName
         },
         accessToken,
         refreshToken
@@ -85,15 +78,16 @@ export const login = async (req, res, next) => {
     }
 
     // Get user with password hash
-    const { data: user, error: queryError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .single();
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email.toLowerCase()]
+    );
 
-    if (!user || queryError) {
+    if (users.length === 0) {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
+
+    const user = users[0];
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -102,10 +96,10 @@ export const login = async (req, res, next) => {
     }
 
     // Update last login
-    await supabase
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', user.id);
+    await pool.query(
+      'UPDATE users SET last_login = ? WHERE id = ?',
+      [new Date(), user.id]
+    );
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user.id, user.email);

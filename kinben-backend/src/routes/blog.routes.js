@@ -1,19 +1,25 @@
-// Blog routes scaffold
 import express from 'express';
+import {
+  getBlogPosts,
+  getBlogPostById,
+  getBlogPostBySlug,
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost
+} from '../controllers/blogController.js';
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+
 const router = express.Router();
 
-// Sample controller imports (to be implemented)
-// import { getBlogPosts, getBlogPostById, createBlogPost, updateBlogPost, deleteBlogPost } from '../controllers/blogController.js';
+// Public routes
+router.get('/', getBlogPosts);
+router.get('/:id', getBlogPostById);
+router.get('/slug/:slug', getBlogPostBySlug);
 
-// GET /api/blog/posts
-router.get('/posts', (req, res) => res.json({ success: true, data: [] }));
-// GET /api/blog/posts/:id
-router.get('/posts/:id', (req, res) => res.json({ success: true, data: {} }));
-// POST /api/blog/posts
-router.post('/posts', (req, res) => res.json({ success: true, message: 'Blog post created' }));
-// PATCH /api/blog/posts/:id
-router.patch('/posts/:id', (req, res) => res.json({ success: true, message: 'Blog post updated' }));
-// DELETE /api/blog/posts/:id
-router.delete('/posts/:id', (req, res) => res.json({ success: true, message: 'Blog post deleted' }));
+// Admin routes
+router.post('/', authMiddleware, adminMiddleware, createBlogPost);
+router.patch('/:id', authMiddleware, adminMiddleware, updateBlogPost);
+router.delete('/:id', authMiddleware, adminMiddleware, deleteBlogPost);
 
 export default router;
+

@@ -503,57 +503,103 @@ Response 200 with success message.
 
 ### List Blog Posts
 ```
-GET /api/blog/posts
-Params: page, limit, search, filter
+GET /api/blog?page=1&limit=10&search=fashion&status=published&sort=newest
 
 Response:
 {
   "success": true,
-  "data": [ { blog posts } ],
-  "pagination": { ... }
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Blog Post Title",
+      "slug": "blog-post-slug",
+      "excerpt": "Short excerpt...",
+      "content": "Full content...",
+      "author_id": "uuid",
+      "featured_image_url": "url",
+      "tags": ["tag1", "tag2"],
+      "status": "published",
+      "view_count": 42,
+      "is_featured": true,
+      "published_at": "2024-03-01T...",
+      "created_at": "2024-03-01T..."
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
 }
 ```
 
+**Query Parameters:**
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10)
+- `search` - Search in title/content
+- `status` - Filter by status (published, draft, all)
+- `sort` - Sort by (newest, oldest, popular)
+
 ### Get Blog Post By ID
 ```
-GET /api/blog/posts/:id
+GET /api/blog/:id
 
 Response:
 {
   "success": true,
-  "data": { blogPost }
+  "data": { ...blog post details... }
+}
+```
+
+### Get Blog Post By Slug
+```
+GET /api/blog/slug/:slug
+
+Response:
+{
+  "success": true,
+  "data": { ...blog post details... }
 }
 ```
 
 ### Create Blog Post (Admin)
 ```
-POST /api/blog/posts
+POST /api/blog
 Authorization: Bearer <adminToken>
 Content-Type: application/json
 
 {
   "title": "New Blog Post",
-  "content": "This is the content of the blog post.",
-  "author": "Admin",
-  "tags": ["tag1", "tag2"]
+  "slug": "new-blog-post",
+  "excerpt": "Short summary",
+  "content": "Full blog content...",
+  "category": "Fashion",
+  "tags": ["tag1", "tag2"],
+  "featured_image_url": "https://...",
+  "is_featured": false
 }
 
 Response:
 {
   "success": true,
+  "data": { ...blog post... },
   "message": "Blog post created successfully"
 }
 ```
 
 ### Update Blog Post (Admin)
 ```
-PATCH /api/blog/posts/:id
+PATCH /api/blog/:id
 Authorization: Bearer <adminToken>
 Content-Type: application/json
 
 {
   "title": "Updated Blog Post Title",
   "content": "Updated content",
+  "status": "published",
   "tags": ["updatedTag1", "updatedTag2"]
 }
 
@@ -566,7 +612,7 @@ Response:
 
 ### Delete Blog Post (Admin)
 ```
-DELETE /api/blog/posts/:id
+DELETE /api/blog/:id
 Authorization: Bearer <adminToken>
 
 Response:
@@ -582,13 +628,52 @@ Response:
 
 ### Get Wishlist
 ```
-GET /api/wishlist
+GET /api/wishlist?page=1&limit=20
 Authorization: Bearer <accessToken>
 
 Response:
 {
   "success": true,
-  "data": [ { wishlist items } ]
+  "data": [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "product_id": "uuid",
+      "added_at": "2024-03-01T...",
+      "name": "Product Name",
+      "slug": "product-slug",
+      "price": 1490,
+      "compare_price": 1790,
+      "average_rating": 4.5,
+      "total_reviews": 10,
+      "stock_quantity": 50,
+      "is_featured": true,
+      "images": "image1.jpg,image2.jpg"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 15,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  }
+}
+```
+
+### Check Product in Wishlist
+```
+GET /api/wishlist/check/:productId
+Authorization: Bearer <accessToken>
+
+Response:
+{
+  "success": true,
+  "data": {
+    "inWishlist": true,
+    "itemId": "uuid"
+  }
 }
 ```
 
@@ -605,7 +690,8 @@ Content-Type: application/json
 Response:
 {
   "success": true,
-  "message": "Item added to wishlist"
+  "data": { wishlist item },
+  "message": "Item added to wishlist successfully"
 }
 ```
 
@@ -617,7 +703,19 @@ Authorization: Bearer <accessToken>
 Response:
 {
   "success": true,
-  "message": "Item removed from wishlist"
+  "message": "Item removed from wishlist successfully"
+}
+```
+
+### Clear Wishlist
+```
+DELETE /api/wishlist
+Authorization: Bearer <accessToken>
+
+Response:
+{
+  "success": true,
+  "message": "Wishlist cleared successfully"
 }
 ```
 
@@ -631,13 +729,113 @@ POST /api/newsletter/subscribe
 Content-Type: application/json
 
 {
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "name": "John Doe"
 }
 
 Response:
 {
   "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "status": "subscribed",
+    "subscribed_at": "2024-03-01T..."
+  },
   "message": "Subscribed to newsletter successfully"
+}
+```
+
+### Unsubscribe from Newsletter
+```
+POST /api/newsletter/unsubscribe/:id
+
+Response:
+{
+  "success": true,
+  "message": "Unsubscribed from newsletter successfully"
+}
+```
+
+### List Subscribers (Admin)
+```
+GET /api/newsletter/subscribers?page=1&limit=50&status=subscribed&search=email
+
+Authorization: Bearer <adminToken>
+
+Response:
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "user_id": "uuid",
+      "status": "subscribed",
+      "subscribed_at": "2024-03-01T...",
+      "unsubscribed_at": null,
+      "created_at": "2024-03-01T..."
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 150,
+    "totalPages": 3,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
+}
+```
+
+### Remove Subscriber (Admin)
+```
+DELETE /api/newsletter/subscribers/:id
+Authorization: Bearer <adminToken>
+
+Response:
+{
+  "success": true,
+  "message": "Subscriber removed successfully"
+}
+```
+
+### Batch Unsubscribe (Admin)
+```
+POST /api/newsletter/subscribers/batch-unsubscribe
+Authorization: Bearer <adminToken>
+Content-Type: application/json
+
+{
+  "emails": ["user1@example.com", "user2@example.com"]
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "unsubscribed_count": 2
+  },
+  "message": "2 subscribers unsubscribed successfully"
+}
+```
+
+### Newsletter Statistics (Admin)
+```
+GET /api/newsletter/stats
+Authorization: Bearer <adminToken>
+
+Response:
+{
+  "success": true,
+  "data": {
+    "total_subscribers": 150,
+    "active_subscribers": 145,
+    "unsubscribed": 5,
+    "subscription_days": 30
+  }
 }
 ```
 

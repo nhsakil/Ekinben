@@ -10,10 +10,10 @@ import productRoutes from './routes/products.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import orderRoutes from './routes/orders.routes.js';
 import userRoutes from './routes/users.routes.js';
-// import wishlistRoutes from './routes/wishlist.routes.js';
-// import reviewRoutes from './routes/reviews.routes.js';
-// import blogRoutes from './routes/blog.routes.js';
-// import newsletterRoutes from './routes/newsletter.routes.js';
+import wishlistRoutes from './routes/wishlist.routes.js';
+import reviewRoutes from './routes/reviews.routes.js';
+import blogRoutes from './routes/blog.routes.js';
+import newsletterRoutes from './routes/newsletter.routes.js';
 // import adminRoutes from './routes/admin.routes.js';
 
 const app = express();
@@ -75,16 +75,16 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 
 // Wishlist routes
-// app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 // Review routes
-// app.use('/api/reviews', reviewRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Blog routes
-// app.use('/api/blog', blogRoutes);
+app.use('/api/blog', blogRoutes);
 
 // Newsletter routes
-// app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Admin routes
 // app.use('/api/admin', adminRoutes);
