@@ -23,12 +23,12 @@ export const signup = async (req, res, next) => {
     }
 
     // Check if user exists
-    const [existingUsers] = await pool.query(
-      'SELECT id FROM users WHERE email = ?',
+    const existingUserResult = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
 
-    if (existingUsers.length > 0) {
+    if (existingUserResult.rows.length > 0) {
       throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
     }
 
@@ -43,7 +43,7 @@ export const signup = async (req, res, next) => {
     await pool.query(
       `INSERT INTO users
        (id, email, password_hash, first_name, last_name, phone_number, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [userId, email.toLowerCase(), passwordHash, firstName, lastName, phone, now, now]
     );
 
@@ -78,16 +78,16 @@ export const login = async (req, res, next) => {
     }
 
     // Get user with password hash
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
 
-    if (users.length === 0) {
+    if (userResult.rows.length === 0) {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
-    const user = users[0];
+    const user = userResult.rows[0];
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -97,7 +97,7 @@ export const login = async (req, res, next) => {
 
     // Update last login
     await pool.query(
-      'UPDATE users SET last_login = ? WHERE id = ?',
+      'UPDATE users SET last_login = $1 WHERE id = $2',
       [new Date(), user.id]
     );
 
@@ -151,15 +151,16 @@ export const getCurrentUser = async (req, res, next) => {
   try {
     const { userId } = req.user;
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, first_name, last_name, phone_number, profile_image_url, created_at')
-      .eq('id', userId)
-      .single();
+    const userResult = await pool.query(
+      'SELECT id, email, first_name, last_name, phone_number, profile_image_url, created_at FROM users WHERE id = $1',
+      [userId]
+    );
 
-    if (error || !user) {
+    if (userResult.rows.length === 0) {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
+
+    const user = userResult.rows[0];
 
     res.json({
       success: true,
