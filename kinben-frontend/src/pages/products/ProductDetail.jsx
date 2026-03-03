@@ -335,24 +335,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-                  key={color}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
-                >
-                  {color}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-4">
-            <button className="flex-1 btn-primary">Add to Cart</button>
-            <button className="px-6 btn-outline">♡ Wishlist</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ProductDetailPage;

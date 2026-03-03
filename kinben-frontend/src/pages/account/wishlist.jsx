@@ -1,17 +1,11 @@
 import React from 'react';
+import WishlistItem from '../../components/Wishlist/WishlistItem';
 
-const WishlistPage = () => {
-  return (
-    <div className="container-layout py-8">
-      <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
-
-      <div className="card">
-        <p className="text-gray-600 text-center py-12">
-          You haven't added anything to your wishlist yet.
-        </p>
-      </div>
-    </div>
-  );
-};
+const WishlistPage = () => (
+  <div className="container-layout py-8">
+    <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
+    <WishlistItem />
+  </div>
+);
 
 export default WishlistPage;

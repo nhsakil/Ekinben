@@ -497,6 +497,176 @@ Content-Type: application/json
 Response 200 with success message.
 ```
 
+---
+
+## Blog System
+
+### List Blog Posts
+```
+GET /api/blog/posts
+Params: page, limit, search, filter
+
+Response:
+{
+  "success": true,
+  "data": [ { blog posts } ],
+  "pagination": { ... }
+}
+```
+
+### Get Blog Post By ID
+```
+GET /api/blog/posts/:id
+
+Response:
+{
+  "success": true,
+  "data": { blogPost }
+}
+```
+
+### Create Blog Post (Admin)
+```
+POST /api/blog/posts
+Authorization: Bearer <adminToken>
+Content-Type: application/json
+
+{
+  "title": "New Blog Post",
+  "content": "This is the content of the blog post.",
+  "author": "Admin",
+  "tags": ["tag1", "tag2"]
+}
+
+Response:
+{
+  "success": true,
+  "message": "Blog post created successfully"
+}
+```
+
+### Update Blog Post (Admin)
+```
+PATCH /api/blog/posts/:id
+Authorization: Bearer <adminToken>
+Content-Type: application/json
+
+{
+  "title": "Updated Blog Post Title",
+  "content": "Updated content",
+  "tags": ["updatedTag1", "updatedTag2"]
+}
+
+Response:
+{
+  "success": true,
+  "message": "Blog post updated successfully"
+}
+```
+
+### Delete Blog Post (Admin)
+```
+DELETE /api/blog/posts/:id
+Authorization: Bearer <adminToken>
+
+Response:
+{
+  "success": true,
+  "message": "Blog post deleted successfully"
+}
+```
+
+---
+
+## Wishlist System
+
+### Get Wishlist
+```
+GET /api/wishlist
+Authorization: Bearer <accessToken>
+
+Response:
+{
+  "success": true,
+  "data": [ { wishlist items } ]
+}
+```
+
+### Add Item to Wishlist
+```
+POST /api/wishlist
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "productId": "uuid"
+}
+
+Response:
+{
+  "success": true,
+  "message": "Item added to wishlist"
+}
+```
+
+### Remove Item from Wishlist
+```
+DELETE /api/wishlist/:itemId
+Authorization: Bearer <accessToken>
+
+Response:
+{
+  "success": true,
+  "message": "Item removed from wishlist"
+}
+```
+
+---
+
+## Newsletter System
+
+### Subscribe to Newsletter
+```
+POST /api/newsletter/subscribe
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+
+Response:
+{
+  "success": true,
+  "message": "Subscribed to newsletter successfully"
+}
+```
+
+### List Subscribers (Admin)
+```
+GET /api/newsletter/subscribers
+Authorization: Bearer <adminToken>
+
+Response:
+{
+  "success": true,
+  "data": [ { subscribers } ]
+}
+```
+
+### Remove Subscriber (Admin)
+```
+DELETE /api/newsletter/subscribers/:id
+Authorization: Bearer <adminToken>
+
+Response:
+{
+  "success": true,
+  "message": "Subscriber removed successfully"
+}
+```
+
+---
+
 ## Shopping Cart
 
 ### Get Cart

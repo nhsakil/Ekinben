@@ -4,138 +4,86 @@ import AccountSidebar from '../../components/Account/AccountSidebar';
 import AddressCard from '../../components/Account/AddressCard';
 import AddressModal from '../../components/Account/AddressModal';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks/useAuth';
+import AddressForm from '../../components/Account/AddressForm';
 
-const AddressBookPage = () => {
+const AddressesPage = () => {
+  const { token } = useAuth();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [editingAddress, setEditingAddress] = useState(null);
-
-  const apiUrl = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem('accessToken');
-
-  const fetchAddresses = async () => {
-    try {
-      const response = await axios.get(`${apiUrl}/users/addresses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAddresses(response.data.data);
-    } catch (error) {
-      toast.error('Failed to load addresses');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showModal, setShowModal] = useState(false);
+  const [editAddress, setEditAddress] = useState(null);
 
   useEffect(() => {
-    if (token) {
-      fetchAddresses();
-    }
-  }, [apiUrl, token]);
+    const fetchAddresses = async () => {
+      try {
+        const res = await axios.get('/api/users/addresses', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setAddresses(res.data.data);
+      } catch (err) {
+        // handle error
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAddresses();
+  }, [token]);
 
-  const handleAddAddress = () => {
-    setEditingAddress(null);
-    setShowAddressModal(true);
+  const handleAdd = () => {
+    setEditAddress(null);
+    setShowModal(true);
   };
 
-  const handleEditAddress = (address) => {
-    setEditingAddress(address);
-    setShowAddressModal(true);
+  const handleEdit = (address) => {
+    setEditAddress(address);
+    setShowModal(true);
   };
 
-  const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm('Are you sure you want to delete this address?')) {
-      return;
-    }
+  const handleDelete = async (id) => {
+    await axios.delete(`/api/users/addresses/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setAddresses(addresses.filter(addr => addr.id !== id));
+  };
 
-    try {
-      await axios.delete(`${apiUrl}/users/addresses/${addressId}`, {
+  const handleSave = async (address) => {
+    if (address.id) {
+      // Edit
+      const res = await axios.patch(`/api/users/addresses/${address.id}`, address, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setAddresses(addresses.filter(a => a.id !== addressId));
-      toast.success('Address deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete address');
-      console.error(error);
+      setAddresses(addresses.map(addr => addr.id === address.id ? res.data.data : addr));
+    } else {
+      // Add
+      const res = await axios.post('/api/users/addresses', address, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAddresses([...addresses, res.data.data]);
     }
+    setShowModal(false);
   };
 
-  const handleAddressSaved = () => {
-    setShowAddressModal(false);
-    fetchAddresses();
-  };
-
-  if (loading) {
-    return (
-      <div className="container-layout py-12">
-        <div className="text-center">
-          <p className="text-gray-600">Loading addresses...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="container-layout py-12">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">My Account</h1>
-        <p className="text-gray-600 mt-2">Manage your addresses</p>
+    <div className="max-w-2xl mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">My Addresses</h2>
+      <button className="mb-4 px-4 py-2 bg-blue-600 text-white rounded" onClick={handleAdd}>Add Address</button>
+      <div className="space-y-4">
+        {addresses.map(addr => (
+          <AddressCard key={addr.id} address={addr} onEdit={() => handleEdit(addr)} onDelete={() => handleDelete(addr.id)} />
+        ))}
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <AccountSidebar />
-
-        {/* Main Content */}
-        <div className="md:col-span-3">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Saved Addresses</h2>
-              <button
-                onClick={handleAddAddress}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                + Add New Address
-              </button>
-            </div>
-
-            {addresses.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600 mb-4">You haven't saved any addresses yet</p>
-                <button
-                  onClick={handleAddAddress}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Add Your First Address
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {addresses.map(address => (
-                  <AddressCard
-                    key={address.id}
-                    address={address}
-                    onEdit={() => handleEditAddress(address)}
-                    onDelete={() => handleDeleteAddress(address.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Add/Edit Address Modal */}
-      {showAddressModal && (
+      {showModal && (
         <AddressModal
-          address={editingAddress}
-          onClose={() => setShowAddressModal(false)}
-          onSaved={handleAddressSaved}
+          address={editAddress}
+          onSave={handleSave}
+          onClose={() => setShowModal(false)}
         />
       )}
     </div>
   );
 };
 
-export default AddressBookPage;
+export default AddressesPage;

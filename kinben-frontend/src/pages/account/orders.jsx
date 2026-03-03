@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AccountSidebar from '../../components/Account/AccountSidebar';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../hooks/useAuth';
 
 const OrdersPage = () => {
+  const { token } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem('accessToken');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -57,6 +59,21 @@ const OrdersPage = () => {
   const filteredOrders = filter === 'all'
     ? orders
     : orders.filter(order => order.status === filter);
+
+  const handleViewDetails = async (orderId) => {
+    try {
+      const res = await axios.get(`/api/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedOrder(res.data.data);
+    } catch (err) {
+      // handle error
+    }
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedOrder(null);
+  };
 
   if (loading) {
     return (
@@ -171,7 +188,7 @@ const OrdersPage = () => {
                         )}
                       </div>
 
-                      <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm whitespace-nowrap">
+                      <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm whitespace-nowrap" onClick={() => handleViewDetails(order.id)}>
                         View Details
                       </button>
                     </div>
@@ -182,6 +199,25 @@ const OrdersPage = () => {
           </div>
         </div>
       </div>
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-lg w-full relative">
+            <button className="absolute top-2 right-2 text-gray-500" onClick={handleCloseDetails}>×</button>
+            <h3 className="text-xl font-bold mb-2">Order #{selectedOrder.orderNumber}</h3>
+            <div>Status: {selectedOrder.status}</div>
+            <div>Total: ৳{selectedOrder.total}</div>
+            <div className="mt-4">
+              <h4 className="font-semibold mb-2">Items</h4>
+              <ul className="list-disc ml-5">
+                {selectedOrder.items.map(item => (
+                  <li key={item.id}>{item.name} x {item.quantity} (৳{item.price})</li>
+                ))}
+              </ul>
+            </div>
+            {/* Add more details as needed (shipping, billing, etc.) */}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
