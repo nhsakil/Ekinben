@@ -8,7 +8,11 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "jest --detectOpenHandles",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:unit": "jest __tests__/utils --detectOpenHandles",
+    "test:integration": "jest __tests__/integration --detectOpenHandles",
+    "test:coverage": "jest --coverage",
+    "test:load": "node __tests__/load-testing/loadTest.js"
   },
   "keywords": [
     "ecommerce",

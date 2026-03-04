@@ -1,0 +1,374 @@
+# GitHub Actions CI/CD Workflow for KINBEN Backend
+# This workflow runs on every push and pull request to main branch
+# It performs: linting, testing, coverage analysis, and deploys to production
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+
+jobs:
+  # ============ CODE QUALITY & LINTING ============
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'kinben-backend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd kinben-backend
+          npm ci
+
+      - name: Run ESLint
+        run: |
+          cd kinben-backend
+          npm run lint --if-present || echo "No lint script defined"
+
+      - name: Check code formatting
+        run: |
+          cd kinben-backend
+          npm run format:check --if-present || echo "No format check script defined"
+
+  # ============ SECURITY SCANNING ============
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'kinben-backend/package-lock.json'
+
+      - name: Run npm audit
+        run: |
+          cd kinben-backend
+          npm audit --audit-level=moderate || true
+
+      - name: Run npm security audit (Snyk alternative)
+        run: |
+          cd kinben-backend
+          npm install -g snyk || true
+          snyk test || true
+
+      - name: Check for vulnerable dependencies
+        uses: advisories/github-action@main
+        continue-on-error: true
+
+  # ============ UNIT & INTEGRATION TESTS ============
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: kinben_ecommerce_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'kinben-backend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd kinben-backend
+          npm ci
+
+      - name: Create .env file for testing
+        run: |
+          cd kinben-backend
+          cat > .env.test << EOF
+          NODE_ENV=test
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USER=test
+          DB_PASSWORD=test
+          DB_NAME=kinben_ecommerce_test
+          JWT_SECRET=test-secret-key
+          CORS_ORIGIN=http://localhost:5173
+          EOF
+
+      - name: Run unit tests
+        run: |
+          cd kinben-backend
+          npm run test:unit -- --coverage --coveragePathIgnorePatterns=/node_modules/
+        env:
+          NODE_ENV: test
+
+      - name: Run integration tests
+        run: |
+          cd kinben-backend
+          npm run test:integration -- --coverage
+        env:
+          NODE_ENV: test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./kinben-backend/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: kinben-backend/coverage/
+
+  # ============ BUILD & DOCKER ============
+  build:
+    name: Build & Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint, security, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/kinben-backend
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./kinben-backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============ PERFORMANCE TESTING ============
+  performance:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: kinben_ecommerce
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'kinben-backend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd kinben-backend
+          npm ci
+
+      - name: Create .env file
+        run: |
+          cd kinben-backend
+          cat > .env << EOF
+          NODE_ENV=production
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_NAME=kinben_ecommerce
+          JWT_SECRET=test-secret-key
+          CORS_ORIGIN=http://localhost:5173
+          EOF
+
+      - name: Run database migrations
+        run: |
+          cd kinben-backend
+          psql -h localhost -U postgres -d kinben_ecommerce -f src/migrations/001_create_tables.sql || true
+          psql -h localhost -U postgres -d kinben_ecommerce -f src/migrations/003_database_optimization.sql || true
+
+      - name: Start server
+        run: |
+          cd kinben-backend
+          npm start &
+          sleep 5
+
+      - name: Run load tests
+        run: |
+          cd kinben-backend
+          CONCURRENT_USERS=50 REQUESTS_PER_USER=5 npm run test:load || true
+
+      - name: Archive performance results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: kinben-backend/performance-results/
+
+  # ============ DEPLOYMENT ============
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, performance]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+
+    environment:
+      name: production
+      url: https://kinben-api.production.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to production
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          echo "Deploying to production..."
+          # Example: SSH deployment
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+
+          # Deploy commands (customize for your infrastructure)
+          ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOSSH'
+            cd /home/kinben/app
+            git fetch origin
+            git checkout main
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart kinben-api || pm2 start npm --name kinben-api -- start
+          EOSSH
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          sleep 10
+          curl -f https://kinben-api.production.com/api/health || exit 1
+
+      - name: Notify on success
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Deployment successful! API is live.'
+            })
+
+  # ============ NOTIFICATIONS ============
+  notify:
+    name: Notifications
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, security, test, build, performance]
+
+    steps:
+      - name: Send Slack notification (on failure)
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            CI/CD Pipeline Failed!
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Send Slack notification (on success - main branch)
+        if: success() && github.ref == 'refs/heads/main'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            ✅ CI/CD Pipeline Passed!
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}

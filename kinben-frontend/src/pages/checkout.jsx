@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { useCart } from '../../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
+import { useCart } from '../hooks/useCart';
 import axios from 'axios';
-import StepIndicator from './StepIndicator';
-import ShippingForm from './ShippingForm';
-import BillingForm from './BillingForm';
-import PaymentForm from './PaymentForm';
-import OrderReview from './OrderReview';
+import StepIndicator from '../components/Checkout/StepIndicator';
+import ShippingForm from '../components/Checkout/ShippingForm';
+import BillingForm from '../components/Checkout/BillingForm';
+import PaymentForm from '../components/Checkout/PaymentForm';
+import OrderReview from '../components/Checkout/OrderReview';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();

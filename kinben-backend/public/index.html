@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KINBEN Local API Tester</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>KINBEN Local API Tester</h1>
+        <p>Use this page to quickly test backend endpoints in your local environment.</p>
+      </header>
+
+      <section class="card">
+        <h2>Quick Tests</h2>
+        <div class="quick-actions">
+          <button data-endpoint="/api/health" data-method="GET">Health</button>
+          <button data-endpoint="/api/products" data-method="GET">Products</button>
+          <button data-endpoint="/api/products/categories" data-method="GET">Categories</button>
+          <button data-endpoint="/api/blog" data-method="GET">Blog Posts</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Custom Request</h2>
+        <form id="request-form">
+          <label for="method">Method</label>
+          <select id="method" name="method">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+          </select>
+
+          <label for="endpoint">Endpoint</label>
+          <input id="endpoint" name="endpoint" value="/api/health" />
+
+          <label for="token">Bearer Token (optional)</label>
+          <input id="token" name="token" placeholder="eyJ..." />
+
+          <label for="body">JSON Body (optional)</label>
+          <textarea id="body" name="body" rows="8" placeholder='{"email":"test@example.com"}'></textarea>
+
+          <button type="submit" class="submit-btn">Send Request</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Response</h2>
+        <p id="status">Status: -</p>
+        <pre id="response">Run a request to see response output.</pre>
+      </section>
+    </main>
+
+    <script>
+      const quickButtons = document.querySelectorAll('[data-endpoint]');
+      const form = document.getElementById('request-form');
+      const statusEl = document.getElementById('status');
+      const responseEl = document.getElementById('response');
+
+      async function sendRequest({ method, endpoint, token, body }) {
+        statusEl.textContent = 'Status: Loading...';
+        responseEl.textContent = 'Request in progress...';
+
+        const headers = {};
+        if (token && token.trim()) {
+          headers.Authorization = `Bearer ${token.trim()}`;
+        }
+
+        const options = { method, headers };
+        const hasBody = body && body.trim() && method !== 'GET' && method !== 'DELETE';
+
+        if (hasBody) {
+          headers['Content-Type'] = 'application/json';
+          options.body = body;
+        }
+
+        try {
+          const result = await fetch(endpoint, options);
+          const text = await result.text();
+          let payload = text;
+
+          try {
+            payload = JSON.parse(text);
+          } catch (parseError) {
+            // Non-JSON responses are shown as raw text.
+          }
+
+          statusEl.textContent = `Status: ${result.status} ${result.statusText}`;
+          responseEl.textContent =
+            typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+        } catch (error) {
+          statusEl.textContent = 'Status: Request failed';
+          responseEl.textContent = error.message;
+        }
+      }
+
+      quickButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+          const method = button.getAttribute('data-method') || 'GET';
+          const endpoint = button.getAttribute('data-endpoint') || '/api/health';
+          await sendRequest({ method, endpoint, token: '', body: '' });
+        });
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const method = document.getElementById('method').value;
+        const endpoint = document.getElementById('endpoint').value;
+        const token = document.getElementById('token').value;
+        const body = document.getElementById('body').value;
+        await sendRequest({ method, endpoint, token, body });
+      });
+    </script>
+  </body>
+</html>

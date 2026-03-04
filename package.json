@@ -1,0 +1,12 @@
+{
+  "name": "ekinben-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run dev:frontend",
+    "dev:frontend": "npm --prefix kinben-frontend run dev",
+    "dev:backend": "npm --prefix kinben-backend run dev",
+    "build:frontend": "npm --prefix kinben-frontend run build",
+    "start:backend": "npm --prefix kinben-backend run start"
+  }
+}
